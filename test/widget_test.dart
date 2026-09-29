@@ -22,6 +22,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Open navigation menu'));
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Planları keşfet'));
     await tester.tap(find.text('Planları keşfet'));
     await tester.pumpAndSettle();
     expect(find.text('Örnek fiyat: 100 TL / ay'), findsOneWidget);

@@ -16,11 +16,13 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
       - name: Ensure platform files
         run: flutter create . --project-name omnex --platforms=android
       - run: flutter pub get
       - run: flutter analyze lib test
       - run: flutter test
+      - run: python -m unittest discover -s tool -p "test_*.py"
       - run: python3 tool/android_network.py
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
@@ -35,14 +37,30 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
       - name: Ensure platform files
         run: flutter create . --project-name omnex --platforms=windows
       - run: flutter pub get
       - run: flutter analyze lib test
       - run: flutter test
+      - run: python -m unittest discover -s tool -p "test_*.py"
       - run: flutter build windows --release
       - name: Include local setup launcher
         run: Copy-Item distribution/* build/windows/x64/runner/Release/
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) {
+            choco install innosetup --yes --no-progress
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+          & $iscc installer/omnex.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: omnex-windows-setup
+          path: dist/OMNEX-0.5-Windows-Setup.exe
       - uses: actions/upload-artifact@v4
         with:
           name: omnex-windows-build

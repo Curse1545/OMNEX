@@ -1,4 +1,19 @@
-# OMNEX 0.4
+# OMNEX 0.5
+
+## 0.5 Windows yenilikleri
+
+- Inno Setup kurulum EXE'si, masaüstü ve Başlat menüsü kısayolu. D sürücüsü varsa varsayılan D:\OMNEX.
+- Yanıt tarzları, kısa/ayrıntılı yanıt, kalıcı özel talimatlar. Yerel model ağırlıkları aynı Qwen3 1.7B; zeka artışı iddiası yok.
+- 4096 token yerel bağlam ve karakter bütçeli son konuşmalar.
+- UTF-8 metin eki: txt/md/csv/json/log, en fazla 1 MB dosya, ilk 2800 karakter. Kullanıcı eklemeyi onaylar; bulut seçiliyse gönderimde buluta iletilir.
+- Windows TTS: mevcut tr-TR System.Speech sesi gerekir. Ses yoksa açık hata gösterilir; ses kopyalama yok.
+- Yerel Whisper base ile 8 saniyelik Türkçe sesle yazma; ilk model indirmesi internet gerektirir. Metin otomatik gönderilmez.
+- OpenCV yüz konumu algılama ve kamera HUD; kamera açıkça açılır, sayfa kapanınca kapanır. Kimlik tanıma veya modele görüntü aktarımı yok.
+- Kamera/ses kurulumunda Python ve bağımlılıklar D:\OMNEX-Araclar altında hazırlanır. Ayarlardan kurulur. Donanımla gerçek test bu ortamda yapılamadı.
+- Bilgisayar araçları: onayla Not Defteri, Hesap Makinesi veya Dosya Gezgini açma. Model metninden komut çalıştırılmaz.
+- Yardımcı servis yalnız 127.0.0.1 üzerinde rastgele port ve oturum belirteciyle çalışır. Tarayıcı kökenli istekleri reddeder. Başlangıçta kamera/mikrofon açılmaz, görüntü/ses diske yazılmaz. Ana süreç kapanınca helper kapanır.
+
+Abonelik ödeme sistemi ve çok kullanıcılı yönetici sunucusu henüz uygulanmadı; Pro plan ekranı taslaktır. Kullanıcı hesapları veya merkezi özel veri koleksiyonu yok.
 
 ## 0.4 yenilikleri
 
@@ -38,7 +53,7 @@ Mesaj gönderildiğinde o oturumun başarılı sohbet geçmişi OpenAI’a gönd
 
 ## Henüz olmayanlar
 
-Sesli konuşma, internet araması, Android yerel çıkarım, gerçek ödeme ve cihaz kontrolü yoktur. İşlevsiz izin ve işlem demoları kaldırıldı.
+İnternet araması, Android yerel çıkarım, gerçek ödeme ve tam otonom bilgisayar kontrolü yoktur. Windows ses özellikleri gerekli yerel araç/ses kurulumuna bağlıdır. İşlevsiz izin ve işlem demoları kaldırıldı.
 
 ## Geliştirme
 
