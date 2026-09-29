@@ -1,5 +1,8 @@
 name: Build OMNEX
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   push:
@@ -16,6 +19,9 @@ jobs:
       - name: Ensure platform files
         run: flutter create . --project-name omnex --platforms=android
       - run: flutter pub get
+      - run: flutter analyze lib test
+      - run: flutter test
+      - run: python3 tool/android_network.py
       - run: flutter build apk --release
       - uses: actions/upload-artifact@v4
         with:
@@ -32,6 +38,8 @@ jobs:
       - name: Ensure platform files
         run: flutter create . --project-name omnex --platforms=windows
       - run: flutter pub get
+      - run: flutter analyze lib test
+      - run: flutter test
       - run: flutter build windows --release
       - uses: actions/upload-artifact@v4
         with:

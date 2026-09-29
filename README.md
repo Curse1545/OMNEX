@@ -1,48 +1,35 @@
-# OMNEX
+# OMNEX 0.2
 
-OMNEX, Android ve Windows için hazırlanmış Flutter tabanlı yerel-asistan başlangıç projesidir.
+Android ve Windows için kişisel Türkçe sohbet uygulaması.
 
-## Bu ilk sürümde olanlar
+## Durum
 
-- Karanlık temalı sohbet arayüzü
-- Yerel demo yanıt motoru
-- Mikrofon, bildirim ve dosya erişimi için izin ekranı
-- Hassas işlemler için açık kullanıcı onayı akışı
-- Android ve Windows için GitHub Actions derleme şablonları
-- Gerçek sistem değişikliği yapmayan güvenli demo davranışı
+Gerçek OpenAI Responses API istemcisi eklendi. Canlı model testi yapılmadı; kendi API hesabınız ve erişebildiğiniz model kimliği gerekir. Anahtar uygulama ayarlarında girilir, yalnızca RAM’de tutulur, uygulama kapatıldığında kaybolur. Anahtarı GitHub’a veya sohbete göndermeyin.
 
-## Çalıştırma
+Mesaj gönderildiğinde o oturumun başarılı sohbet geçmişi OpenAI’a gönderilir (`store: false`). Yeni sohbet düğmesi geçmişi temizler. API kullanımı ayrıca ücretlenebilir. Ortak bir geliştirici anahtarı uygulamaya gömülmemelidir; çok kullanıcılı dağıtım için kimlik doğrulamalı sunucu katmanı gerekir.
 
-Bilgisayarda Flutter kuruluysa:
+## Eklenenler
 
-```bash
-flutter create . --platforms=android,windows
+- Model ve API anahtarı ayar ekranı
+- Asenkron gerçek yanıt isteği, 90 saniye zaman aşımı
+- Türkçe bağlantı, kimlik doğrulama ve kota hataları
+- Başarısız mesajı düzenleme alanına geri koyma
+- Yeni sohbet, seçilebilir yanıtlar, bekleme göstergesi
+- Android ve Windows derlemeleri; analiz ve otomatik testler
+
+## Henüz olmayanlar
+
+Sesli konuşma, kalıcı sohbet geçmişi ve gerçek cihaz kontrolü yoktur. İzin anahtarları ve onay diyaloğu arayüz demosudur; işletim sistemi izni vermez veya komut çalıştırmaz.
+
+## Geliştirme
+
+```sh
+flutter create . --project-name omnex --platforms=android,windows
 flutter pub get
-flutter run
-```
-
-Bu ZIP içindeki `lib/main.dart` ve `pubspec.yaml` dosyaları hazırdır. `flutter create .` eksik platform klasörlerini üretir.
-
-## Android APK
-
-```bash
+flutter analyze lib test
+flutter test
+python3 tool/android_network.py
 flutter build apk --release
 ```
 
-Çıktı normalde:
-`build/app/outputs/flutter-apk/app-release.apk`
-
-## Windows
-
-```bash
-flutter build windows --release
-```
-
-## Sonraki geliştirme adımları
-
-1. Gerçek yapay zekâ/model bağlantısı
-2. Güvenli yerel komut yürütme katmanı
-3. Sesli giriş/çıkış
-4. Kalıcı ayarlar
-5. Ayrıntılı izin politikası
-6. Windows ve Android için imzalı dağıtım
+Windows derlemesi Windows üzerinde `flutter build windows --release` ile yapılır. Actions çıktıları APK ve Windows çalıştırma klasörüdür; Windows klasöründeki DLL ve veri dosyalarını EXE ile birlikte tutun. Android ilk deneme paketi Flutter’ın varsayılan geliştirme imzasını kullanır; mağaza yayınına hazır değildir.

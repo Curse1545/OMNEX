@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'model_client.dart';
 
 void main() {
   runApp(const OmnexApp());
@@ -46,7 +47,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
 
   final List<ChatMessage> _messages = [
     const ChatMessage(
-      'OMNEX hazır. Şimdilik yerel demo modundayım; riskli işlemler senden onay almadan çalıştırılmaz.',
+      'Merhaba, ben OMNEX. Sohbete başlamak için sağ üstten model bağlantısını ayarla.',
       fromUser: false,
     ),
   ];
@@ -55,43 +56,89 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
   bool _allowMicrophone = false;
   bool _allowFiles = false;
 
-  void _sendMessage() {
-    final text = _controller.text.trim();
-    if (text.isEmpty) return;
+  String _apiKey = '';
+  String _model = '';
+  bool _busy = false;
+  String? _error;
+  final _history = <Map<String, String>>[];
 
+  Future<void> _sendMessage() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _busy) return;
+    if (_apiKey.isEmpty || _model.isEmpty) {
+      await _showConnection();
+      return;
+    }
     setState(() {
+      _busy = true;
+      _error = null;
       _messages.add(ChatMessage(text, fromUser: true));
-      _messages.add(
-        ChatMessage(
-          _demoReply(text),
-          fromUser: false,
-        ),
-      );
       _controller.clear();
     });
+    _scrollToEnd();
+    final pending = {'role': 'user', 'content': text};
+    try {
+      final reply = await ModelClient().reply(
+        apiKey: _apiKey, model: _model, history: [..._history, pending],
+      );
+      if (!mounted) return;
+      setState(() {
+        _history.addAll([pending, {'role': 'assistant', 'content': reply}]);
+        _messages.add(ChatMessage(reply, fromUser: false));
+      });
+    } on ModelFailure catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error.message;
+        _messages.removeLast();
+        _controller.text = text;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _busy = false);
+        _scrollToEnd();
+      }
+    }
+  }
 
+  void _scrollToEnd() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.animateTo(_scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
       }
     });
   }
 
-  String _demoReply(String input) {
-    final lower = input.toLowerCase();
-    if (lower.contains('dosya') || lower.contains('sil')) {
-      return 'Bu işlem dosyalarda değişiklik yapabilir. Güvenlik nedeniyle önce açık onay gerekir.';
-    }
-    if (lower.contains('mikrofon')) {
-      return _allowMicrophone
-          ? 'Mikrofon izni OMNEX ayarlarında açık görünüyor.'
-          : 'Mikrofon izni kapalı. İzinler ekranından açabilirsin.';
-    }
-    return 'Mesajını aldım: "$input". Bu sürümde yanıt motoru demo modunda; sonraki adımda gerçek model bağlantısı eklenebilir.';
+  Future<void> _showConnection() async {
+    final key = TextEditingController(text: _apiKey);
+    final model = TextEditingController(text: _model);
+    await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Model bağlantısı'),
+      content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Text('Kişisel kullanım: kendi OpenAI API anahtarını gir. Anahtar yalnızca bu oturumda tutulur; dosyaya kaydedilmez. Gönderdiğin mesajlar ve bu sohbetin geçmişi OpenAI’a iletilir. API kullanımı ayrıca ücretlenebilir.'),
+        const SizedBox(height: 16),
+        TextField(controller: key, obscureText: true, autocorrect: false,
+          enableSuggestions: false, decoration: const InputDecoration(labelText: 'OpenAI API anahtarı')),
+        TextField(controller: model, autocorrect: false, enableSuggestions: false,
+          decoration: const InputDecoration(labelText: 'Hesabındaki model kimliği')),
+      ])),
+      actions: [
+        TextButton(onPressed: () {
+          setState(() { _apiKey = ''; _model = ''; });
+          Navigator.pop(dialogContext);
+        }, child: const Text('Bağlantıyı temizle')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('İptal')),
+        FilledButton(onPressed: () {
+          setState(() { _apiKey = key.text.trim(); _model = model.text.trim(); });
+          Navigator.pop(dialogContext);
+        }, child: const Text('Bu oturumda kullan')),
+      ],
+    ));
+    // Wait for the closing dialog animation before disposing its fields.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    key.dispose();
+    model.dispose();
   }
 
   Future<void> _showPermissions() async {
@@ -114,7 +161,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     subtitle: Text(
-                      'İzinler varsayılan olarak kapalıdır. İhtiyacın olmayan erişimleri açma.',
+                      'Bu anahtarlar yalnızca arayüz demosudur; cihaz izni vermez. Mikrofon ve dosya işlemleri henüz desteklenmiyor.',
                     ),
                   ),
                   SwitchListTile(
@@ -203,6 +250,8 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
           ],
         ),
         actions: [
+          IconButton(tooltip: 'Model bağlantısı', onPressed: _busy ? null : _showConnection, icon: const Icon(Icons.settings_outlined)),
+          IconButton(tooltip: 'Yeni sohbet', onPressed: _busy ? null : () { setState(() { _history.clear(); _messages.clear(); _error = null; }); }, icon: const Icon(Icons.add_comment_outlined)),
           IconButton(
             tooltip: 'İzinler',
             onPressed: _showPermissions,
@@ -221,11 +270,13 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: const Text(
-              'Yerel demo modu • Hassas işlemler açık onay gerektirir',
+            child: Text(
+              _apiKey.isEmpty || _model.isEmpty ? 'Model bağlantısı gerekli' : 'OpenAI • $_model • Cihaz erişimi yok',
               textAlign: TextAlign.center,
             ),
           ),
+          if (_busy) const LinearProgressIndicator(),
+          if (_error != null) Padding(padding: const EdgeInsets.all(12), child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error))),
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -247,7 +298,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
                           : Theme.of(context).colorScheme.surfaceContainer,
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(message.text),
+                    child: SelectableText(message.text),
                   ),
                 );
               },
@@ -262,6 +313,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
                   Expanded(
                     child: TextField(
                       controller: _controller,
+                      enabled: !_busy,
                       minLines: 1,
                       maxLines: 4,
                       textInputAction: TextInputAction.send,
@@ -274,7 +326,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
                   ),
                   const SizedBox(width: 8),
                   IconButton.filled(
-                    onPressed: _sendMessage,
+                    onPressed: _busy ? null : _sendMessage,
                     icon: const Icon(Icons.send),
                   ),
                 ],
