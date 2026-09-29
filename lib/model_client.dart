@@ -93,7 +93,7 @@ List<Map<String, String>> localHistory(List<Map<String, String>> history, {bool 
   }
   final selected = history.sublist(start);
   final bounded = <Map<String, String>>[];
-  var remaining = expanded ? 6200 : 6000;
+  var remaining = expanded ? 6200 : 6500;
   for (var i = selected.length - 1; i >= 0; i--) {
     final m = selected[i];
     final maxLength = expanded && i == selected.length - 1 ? 4200 : 1200;
@@ -224,3 +224,4 @@ class LocalModelClient {
     return readLocalResponse(body);
   }
 }
+
