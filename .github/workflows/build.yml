@@ -41,6 +41,8 @@ jobs:
       - run: flutter analyze lib test
       - run: flutter test
       - run: flutter build windows --release
+      - name: Include local setup launcher
+        run: Copy-Item distribution/* build/windows/x64/runner/Release/
       - uses: actions/upload-artifact@v4
         with:
           name: omnex-windows-build

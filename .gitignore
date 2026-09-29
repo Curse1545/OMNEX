@@ -9,6 +9,3 @@ build/
 *.iml
 android/.gradle/
 windows/flutter/ephemeral/
-.env
-.env.*
-!.env.example

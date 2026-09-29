@@ -75,3 +75,90 @@ class ModelClient {
     }
   }
 }
+
+const localModel = 'qwen3:1.7b';
+
+List<Map<String, String>> localHistory(List<Map<String, String>> history) {
+  // Keep recent whole turns; do not split a user/assistant pair.
+  var start = history.length > 5 ? history.length - 5 : 0;
+  while (start < history.length && history[start]['role'] != 'user') {
+    start++;
+  }
+  return history.sublist(start).map((m) => {
+    'role': m['role']!,
+    'content': m['content']!.length > 1200
+        ? '${m['content']!.substring(0, 1200)} [kısaltıldı]'
+        : m['content']!,
+  }).toList();
+}
+
+String readLocalResponse(Map<String, dynamic> body) {
+  final message = body['message'];
+  if (body['done'] != true || message is! Map || message['content'] is! String ||
+      (message['content'] as String).trim().isEmpty) {
+    throw const ModelFailure('Yerel model metin döndürmedi. Yeniden deneyebilirsin.');
+  }
+  return message['content'] as String;
+}
+
+class LocalModelClient {
+  final int port;
+  LocalModelClient({this.port = 11434});
+
+  Future<Map<String, dynamic>> _call(String path, Map<String, dynamic>? payload) async {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
+    try {
+      return await (() async {
+        final request = await client.openUrl(payload == null ? 'GET' : 'POST',
+          Uri(scheme: 'http', host: '127.0.0.1', port: port, path: path));
+        request.followRedirects = false;
+        if (payload != null) {
+          request.headers.contentType = ContentType.json;
+          request.write(jsonEncode(payload));
+        }
+        final response = await request.close();
+        final body = await response.transform(utf8.decoder).join();
+        if (response.statusCode == 404) {
+          throw const ModelFailure('Model henüz indirilmemiş. Paketteki OMNEX-Yerel-Baslat.cmd dosyasını çalıştır.');
+        }
+        if (response.statusCode != 200) {
+          throw ModelFailure('Ollama yanıt veremedi (HTTP ${response.statusCode}). Bellek için diğer uygulamaları kapat.');
+        }
+        return jsonDecode(body) as Map<String, dynamic>;
+      })().timeout(Duration(seconds: payload == null ? 8 : 180));
+    } on ModelFailure {
+      rethrow;
+    } on SocketException {
+      throw const ModelFailure('Ollama açık değil. OMNEX-Yerel-Baslat.cmd dosyasını çalıştır.');
+    } on TimeoutException {
+      throw const ModelFailure('Yerel model zaman aşımına uğradı. Diğer uygulamaları kapatıp tekrar dene.');
+    } catch (_) {
+      throw const ModelFailure('Ollama yanıtı okunamadı. Yerel kurulumu kontrol et.');
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<void> check() async {
+    final body = await _call('/api/tags', null);
+    final models = body['models'] as List? ?? [];
+    if (!models.any((m) => m is Map && (m['name'] == localModel || m['model'] == localModel))) {
+      throw const ModelFailure('Qwen3 modeli eksik. OMNEX-Yerel-Baslat.cmd dosyasını çalıştır.');
+    }
+  }
+
+  Future<String> reply(List<Map<String, String>> history) async {
+    final body = await _call('/api/chat', {
+      'model': localModel,
+      'stream': false,
+      'think': false,
+      'keep_alive': '1m',
+      'options': {'num_ctx': 2048, 'num_predict': 384, 'num_thread': 2},
+      'messages': [
+        {'role': 'system', 'content': 'Sen OMNEX adlı Türkçe asistansın. Kısa, doğru ve anlaşılır yanıt ver. Cihaz kontrolün yok; yapmadığın işlemleri yaptığını söyleme.'},
+        ...localHistory(history),
+      ],
+    });
+    return readLocalResponse(body);
+  }
+}

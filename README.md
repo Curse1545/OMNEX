@@ -1,4 +1,12 @@
-# OMNEX 0.2
+# OMNEX 0.3
+
+## Ücretsiz Windows yerel modu
+
+Windows varsayılanı Ollama + qwen3:1.7b. API anahtarı ve API ücreti gerekmez. ZIP içindeki OMNEX-Yerel-Baslat.cmd, Ollama eksikse resmi winget paketini kurar, modeli indirir ve OMNEX’i açar. Winget yoksa resmi indirme sayfasını açar. Kullanıcı kurulum ekranlarını tamamlamalıdır.
+
+Yalnızca 127.0.0.1:11434 kullanılır; yerel isteklerde OpenAI anahtarı gönderilmez. 2048 token bağlam, 384 token çıktı, 2 CPU iş parçacığı ve 1 dakika model tutma süresi kullanılır. Model yaklaşık 1.4 GB indirmedir; gerçek RAM/VRAM tüketimi daha fazladır. 8 GB RAM + GTX 1050 Ti üzerinde hız testi yapılmadı. Android yerel mod içermez.
+
+## OpenAI seçeneği
 
 Android ve Windows için kişisel Türkçe sohbet uygulaması.
 

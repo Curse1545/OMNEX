@@ -1,0 +1,9 @@
+OMNEX 0.3 - Windows yerel mod
+
+ZIP dosyasinin tamamini cikarin. OMNEX-Yerel-Baslat.cmd dosyasina cift tiklayin.
+Ilk kurulum Ollama ve Qwen3 1.7B modelini indirir. Internet ve birkac GB bos disk alani gerekir. Kurulumun gosterdigi onaylari okuyun. Sonraki kullanimda model yereldir; API kredisi gerekmez.
+
+Windows surumu otomatik yerel modda baslar. Model adi veya API anahtari yazmaniz gerekmez.
+8 GB RAM icin 2048 token baglam, kisa yanit, son sohbet turlari kullanilir. Eski mesajlar ekranda kalsa da model tam gecmisi gormez. Oyunlari ve fazla tarayici sekmelerini kapatmak yardimci olabilir.
+
+Bu surum sohbet eder; bilgisayari kontrol etmez. Yerel model kalitesi buyuk bulut modelleriyle ayni degildir. GTX 1050 Ti uzerindeki performans bu ortamda test edilmedi.

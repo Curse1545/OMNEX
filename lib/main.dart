@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'model_client.dart';
+import 'dart:io';
 
 void main() {
   runApp(const OmnexApp());
@@ -47,7 +48,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
 
   final List<ChatMessage> _messages = [
     const ChatMessage(
-      'Merhaba, ben OMNEX. Sohbete başlamak için sağ üstten model bağlantısını ayarla.',
+      'Merhaba, ben OMNEX. Windows’ta ücretsiz yerel mod hazır. İlk kurulum için paketteki OMNEX-Yerel-Baslat.cmd dosyasını çalıştır. Bağlantı seçenekleri sağ üstte.',
       fromUser: false,
     ),
   ];
@@ -56,6 +57,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
   bool _allowMicrophone = false;
   bool _allowFiles = false;
 
+  bool _local = Platform.isWindows;
   String _apiKey = '';
   String _model = '';
   bool _busy = false;
@@ -65,8 +67,12 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
   Future<void> _sendMessage() async {
     final text = _controller.text.trim();
     if (text.isEmpty || _busy) return;
-    if (_apiKey.isEmpty || _model.isEmpty) {
+    if (!_local && (_apiKey.isEmpty || _model.isEmpty)) {
       await _showConnection();
+      return;
+    }
+    if (_local && text.length > 1200) {
+      setState(() => _error = 'Yerel modda mesajını 1200 karakterden kısa tut.');
       return;
     }
     setState(() {
@@ -78,9 +84,9 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
     _scrollToEnd();
     final pending = {'role': 'user', 'content': text};
     try {
-      final reply = await ModelClient().reply(
-        apiKey: _apiKey, model: _model, history: [..._history, pending],
-      );
+      final reply = _local
+          ? await LocalModelClient().reply([..._history, pending])
+          : await ModelClient().reply(apiKey: _apiKey, model: _model, history: [..._history, pending]);
       if (!mounted) return;
       setState(() {
         _history.addAll([pending, {'role': 'assistant', 'content': reply}]);
@@ -111,6 +117,31 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
   }
 
   Future<void> _showConnection() async {
+    await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
+      title: const Text('Model bağlantısı'),
+      content: const Text('Yerel mod: API anahtarı ve API ücreti yok. Model bilgisayarında çalışır. 8 GB RAM için kısa yanıtlar ve sınırlı sohbet bağlamı kullanılır. OpenAI seçeneği ayrı API hesabı gerektirir.'),
+      actions: [
+        if (Platform.isWindows) FilledButton(onPressed: () {
+          setState(() { _local = true; _apiKey = ''; _history.clear(); _messages.clear(); _error = null; });
+          Navigator.pop(dialogContext);
+        }, child: const Text('Ücretsiz yerel mod')),
+        if (Platform.isWindows) TextButton(onPressed: () async {
+          Navigator.pop(dialogContext);
+          try {
+            await LocalModelClient().check();
+            if (mounted) setState(() => _error = 'Ollama ve Qwen3 modeli bulundu. Mesaj gönderebilirsin.');
+          } on ModelFailure catch (e) {
+            if (mounted) setState(() => _error = e.message);
+          }
+        }, child: const Text('Yerel bağlantıyı kontrol et')),
+        TextButton(onPressed: () { Navigator.pop(dialogContext); _showOpenAI(); },
+          child: const Text('OpenAI API (ücretli)')),
+        TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Kapat')),
+      ],
+    ));
+  }
+
+  Future<void> _showOpenAI() async {
     final key = TextEditingController(text: _apiKey);
     final model = TextEditingController(text: _model);
     await showDialog<void>(context: context, builder: (dialogContext) => AlertDialog(
@@ -130,7 +161,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
         }, child: const Text('Bağlantıyı temizle')),
         TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('İptal')),
         FilledButton(onPressed: () {
-          setState(() { _apiKey = key.text.trim(); _model = model.text.trim(); });
+          setState(() { _local = false; _history.clear(); _messages.clear(); _apiKey = key.text.trim(); _model = model.text.trim(); });
           Navigator.pop(dialogContext);
         }, child: const Text('Bu oturumda kullan')),
       ],
@@ -271,7 +302,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
             child: Text(
-              _apiKey.isEmpty || _model.isEmpty ? 'Model bağlantısı gerekli' : 'OpenAI • $_model • Cihaz erişimi yok',
+              _local ? 'Ücretsiz yerel mod • Qwen3 1.7B • Cihaz kontrolü yok' : (_apiKey.isEmpty || _model.isEmpty ? 'Model bağlantısı gerekli' : 'OpenAI • $_model • Cihaz erişimi yok'),
               textAlign: TextAlign.center,
             ),
           ),
