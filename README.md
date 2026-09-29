@@ -1,4 +1,15 @@
-# OMNEX 0.3
+# OMNEX 0.4
+
+## 0.4 yenilikleri
+
+- Cihazda saklanan birden fazla sohbet; arama, yeniden adlandırma ve onaylı silme.
+- Yerel modelde parça parça yanıt ve istek durdurma. Durdurulan mesaj taslağa döner; tamamlanmamış yanıt geçmişe eklenmez.
+- Markdown yanıtlar, kod blokları, mesaj/sohbet kopyalama, mesajı düzenleyip yeniden sorma.
+- Açık/koyu tema, geniş ekranda yan panel, telefonda menü, başlangıç önerileri.
+- OMNEX Pro plan karşılaştırması: 100 TL yalnızca örnek aylık fiyat. Ödeme, üyelik ve ücretli model geçişi uygulanmadı. Gerçek bir satış veya ödeme formu yok.
+- D sürücüsüne model indirmek için OMNEX-D-Baslat.cmd dahil.
+
+Geçmiş SharedPreferences ile cihazda şifrelenmeden saklanır; API anahtarları bu kayda dahil değildir. Bozuk geçmiş otomatik silinmez veya üzerine yazılmaz. Android yerel çıkarım henüz desteklenmez. Canlı cihaz testi ayrıca gereklidir.
 
 ## Ücretsiz Windows yerel modu
 
@@ -27,7 +38,7 @@ Mesaj gönderildiğinde o oturumun başarılı sohbet geçmişi OpenAI’a gönd
 
 ## Henüz olmayanlar
 
-Sesli konuşma, kalıcı sohbet geçmişi ve gerçek cihaz kontrolü yoktur. İzin anahtarları ve onay diyaloğu arayüz demosudur; işletim sistemi izni vermez veya komut çalıştırmaz.
+Sesli konuşma, internet araması, Android yerel çıkarım, gerçek ödeme ve cihaz kontrolü yoktur. İşlevsiz izin ve işlem demoları kaldırıldı.
 
 ## Geliştirme
 

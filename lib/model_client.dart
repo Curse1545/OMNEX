@@ -30,12 +30,15 @@ String readResponseText(Map<String, dynamic> body) {
 }
 
 class ModelClient {
+  HttpClient? _active;
+  void cancel() => _active?.close(force: true);
   Future<String> reply({
     required String apiKey,
     required String model,
     required List<Map<String, String>> history,
   }) async {
     final client = HttpClient()..connectionTimeout = const Duration(seconds: 20);
+    _active = client;
     try {
       return await (() async {
         final request = await client.postUrl(Uri.parse('https://api.openai.com/v1/responses'));
@@ -102,6 +105,53 @@ String readLocalResponse(Map<String, dynamic> body) {
 }
 
 class LocalModelClient {
+  HttpClient? _streamClient;
+  void cancel() => _streamClient?.close(force: true);
+
+  Stream<String> streamReply(List<Map<String, String>> history) async* {
+    final client = HttpClient()..connectionTimeout = const Duration(seconds: 5);
+    _streamClient = client;
+    try {
+      final request = await client.postUrl(Uri(scheme: "http", host: "127.0.0.1", port: port, path: "/api/chat"));
+      request.followRedirects = false;
+      request.headers.contentType = ContentType.json;
+      request.write(jsonEncode({
+        "model": localModel, "stream": true, "think": false, "keep_alive": "1m",
+        "options": {"num_ctx": 2048, "num_predict": 512, "num_thread": 2},
+        "messages": [
+          {"role": "system", "content": "Sen OMNEX adlı Türkçe asistansın. Açık, doğru ve yardımcı ol. Gerektiğinde kısa başlıklar ve kod blokları kullan. İnternete ve cihaz kontrolüne erişimin yok. Yapmadığın işlemleri yaptığını söyleme."},
+          ...localHistory(history),
+        ],
+      }));
+      final response = await request.close().timeout(const Duration(seconds: 180));
+      if (response.statusCode != 200) {
+        throw ModelFailure(response.statusCode == 404
+          ? "Model bulunamadı. OMNEX-D-Baslat.cmd dosyasını çalıştır."
+          : "Yerel model hatası (HTTP ${response.statusCode}). Diğer uygulamaları kapatıp yeniden dene.");
+      }
+      var complete = false;
+      await for (final line in response.transform(utf8.decoder).transform(const LineSplitter()).timeout(const Duration(seconds: 180))) {
+        if (line.trim().isEmpty) continue;
+        final data = jsonDecode(line) as Map<String, dynamic>;
+        if (data["error"] != null) throw const ModelFailure("Model yanıtı tamamlanamadı. Ollama penceresini kontrol et.");
+        final token = data["message"]?["content"];
+        if (token is String && token.isNotEmpty) yield token;
+        if (data["done"] == true) { complete = true; break; }
+      }
+      if (!complete) throw const ModelFailure("Bağlantı kesildi; yanıt tamamlanamadı.");
+    } on ModelFailure {
+      rethrow;
+    } on SocketException {
+      throw const ModelFailure("Ollama bağlantısı yok. Paketteki yerel başlatıcıyı çalıştır.");
+    } on TimeoutException {
+      throw const ModelFailure("Yerel model zaman aşımına uğradı. Tekrar deneyebilirsin.");
+    } catch (_) {
+      throw const ModelFailure("Yerel yanıt okunamadı. Yeniden deneyebilirsin.");
+    } finally {
+      client.close(force: true);
+      if (identical(_streamClient, client)) _streamClient = null;
+    }
+  }
   final int port;
   LocalModelClient({this.port = 11434});
 

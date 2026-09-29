@@ -48,4 +48,34 @@ void main() {
     expect(history.first['role'], 'user');
     expect(history.last['content']!.length, lessThan(1250));
   });
+  test('Streaming keeps split UTF-8 chunks and rejects premature disconnect', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final handled = server.first.then((request) async {
+      final body = jsonDecode(await utf8.decoder.bind(request).join()) as Map;
+      expect(body['stream'], true);
+      expect(request.headers.value('authorization'), isNull);
+      request.response.headers.contentType = ContentType('application', 'x-ndjson');
+      final bytes = utf8.encode('${jsonEncode({'message': {'content': 'Türkçe'}, 'done': false})}\n${jsonEncode({'message': {'content': ' yanıt'}, 'done': true})}\n');
+      for (final byte in bytes) { request.response.add([byte]); }
+      await request.response.close();
+    });
+    try {
+      final parts = await LocalModelClient(port: server.port).streamReply([{'role': 'user', 'content': 'Hi'}]).toList();
+      expect(parts.join(), 'Türkçe yanıt');
+      await handled;
+    } finally { await server.close(force: true); }
+  });
+  test('Streaming does not treat incomplete response as a completed answer', () async {
+    final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+    final handled = server.first.then((request) async {
+      await request.drain<void>();
+      request.response.write('${jsonEncode({'message': {'content': 'partial'}, 'done': false})}\n');
+      await request.response.close();
+    });
+    try {
+      await expectLater(LocalModelClient(port: server.port).streamReply([{'role': 'user', 'content': 'Hi'}]),
+        emitsInOrder(['partial', emitsError(isA<ModelFailure>()), emitsDone]));
+      await handled;
+    } finally { await server.close(force: true); }
+  });
 }
