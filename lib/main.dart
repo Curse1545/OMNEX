@@ -70,10 +70,10 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
         _loading = false;
       });
     } catch (_) {
-      if (mounted) setState(() {
+      if (mounted) { setState(() {
         _loading = false; _storageBlocked = true; _chats = [_chat];
         _error = 'Kayıtlı geçmiş okunamadı. Eski kayıtların üzerine yazılmayacak; bu oturum kaydedilmiyor.';
-      });
+      }); }
     }
   }
   Future<void> _save() async {
@@ -238,7 +238,7 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
         Text(user ? 'SEN' : 'OMNEX', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 2, color: Theme.of(context).colorScheme.primary)),
         const SizedBox(height: 10),
         if (user || pending) SelectableText(text, style: const TextStyle(fontSize: 15, height: 1.5))
-        else MarkdownBody(data: text, selectable: true, imageBuilder: (uri, title, alt) => Text(alt ?? 'Görsel bağlantısı'), onTapLink: (text, href, title) { if (href != null) _copy(href); }),
+        else MarkdownBody(data: text, selectable: true, sizedImageBuilder: (config) => Text(config.alt ?? 'Görsel bağlantısı'), onTapLink: (text, href, title) { if (href != null) _copy(href); }),
         if (!pending) Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(tooltip: 'Kopyala', icon: const Icon(Icons.copy_outlined, size: 17), onPressed: () => _copy(text)),
           if (user) IconButton(tooltip: 'Düzenleyip yeniden sor', icon: const Icon(Icons.edit_outlined, size: 17), onPressed: _busy ? null : () => setState(() => _input.text = text)),
@@ -292,3 +292,4 @@ class _OmnexHomePageState extends State<OmnexHomePage> {
   @override
   void dispose() { ++_requestId; _localClient.cancel(); _cloudClient.cancel(); _input.dispose(); _scroll.dispose(); super.dispose(); }
 }
+
